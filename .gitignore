@@ -1,0 +1,99 @@
+import heapq
+import math
+
+# 1. Graf dengan Bobot Jarak Nyata g(n)
+graph = {
+    'A': [('B', 2), ('C', 4)],
+    'B': [('D', 7), ('E', 3)],
+    'C': [('F', 5)],
+    'D': [('G', 1)],
+    'E': [('G', 5)],
+    'F': [('G', 2)],
+    'G': []
+}
+
+# 2. Tabel Perkiraan Jarak Heuristik h(n) ke Tujuan 'G'
+heuristic_table = {
+    'A': 6,
+    'B': 4,
+    'C': 4,
+    'D': 1,
+    'E': 3,
+    'F': 1,
+    'G': 0
+}
+
+#A. Algoritma A* Search ($f(n) = g(n) + h(n)$)
+def a_star_search(graph, start, goal, h):
+    # Queue menyimpan tuple: (f_score, current_node, path_so_far, g_score)
+    open_set = [(h[start], start, [start], 0)]
+    visited = set()
+    nodes_explored = 0
+
+    while open_set:
+        f, current, path, g = heapq.heappop(open_set)
+
+        if current in visited:
+            continue
+
+        visited.add(current)
+        nodes_explored += 1
+
+        # Cek apakah sudah sampai tujuan
+        if current == goal:
+            return path, g, nodes_explored
+
+        for neighbor, cost in graph[current]:
+            if neighbor not in visited:
+                g_new = g + cost
+                f_new = g_new + h[neighbor]
+                heapq.heappush(open_set, (f_new, neighbor, path + [neighbor], g_new))
+
+    return None, float('inf'), nodes_explored
+
+#B. Algoritma Greedy Best-First Search / GBFS ($f(n) = h(n)$)
+def gbfs_search(graph, start, goal, h):
+    # Queue menyimpan tuple: (h_score, current_node, path_so_far, g_score)
+    open_set = [(h[start], start, [start], 0)]
+    visited = set()
+    nodes_explored = 0
+
+    while open_set:
+        h_val, current, path, g = heapq.heappop(open_set)
+
+        if current in visited:
+            continue
+
+        visited.add(current)
+        nodes_explored += 1
+
+        if current == goal:
+            return path, g, nodes_explored
+
+        for neighbor, cost in graph[current]:
+            if neighbor not in visited:
+                g_new = g + cost
+                # GBFS hanya memprioritaskan nilai h(n)
+                heapq.heappush(open_set, (h[neighbor], neighbor, path + [neighbor], g_new))
+
+    return None, float('inf'), nodes_explored
+
+#Eksekusi
+print("=" * 45)
+print("      UJI COBA PENCARIAN JALUR PADA GRAF      ")
+print("=" * 45)
+
+# Eksekusi A* Search
+path_a, cost_a, explored_a = a_star_search(graph, 'A', 'G', heuristic_table)
+print(f"\n[ Algoritma A* Search ]")
+print(f"Jalur Ditemukan  : {' -> '.join(path_a)}")
+print(f"Total Biaya g(n) : {cost_a}")
+print(f"Node Dieksplor   : {explored_a}")
+
+# Eksekusi GBFS Search
+path_g, cost_g, explored_g = gbfs_search(graph, 'A', 'G', heuristic_table)
+print(f"\n[ Algoritma Greedy Best-First Search (GBFS) ]")
+print(f"Jalur Ditemukan  : {' -> '.join(path_g)}")
+print(f"Total Biaya g(n) : {cost_g}")
+print(f"Node Dieksplor   : {explored_g}")
+print("=" * 45)
