@@ -2,19 +2,19 @@ import customtkinter as ctk
 from tkinter import ttk, messagebox
 
 
-class anggotaView(ctk.CTk):
+class AnggotaView(ctk.CTk):
     def __init__(self):
         super().__init__()
 
         self.title("Sistem Manajemen Perpustakaan")
         self.geometry("900x500")
 
-        # Konfigurasi Grid Utama
+        # Konfigurasi grid utama
         self.grid_columnconfigure(0, weight=1)
         self.grid_columnconfigure(1, weight=2)
         self.grid_rowconfigure(0, weight=1)
 
-        # Frame Kiri: Form Data Anggota
+        # Frame kiri: Form data anggota
         self.frame_kiri = ctk.CTkFrame(self)
         self.frame_kiri.grid(
             row=0, column=0, padx=10, pady=10, sticky="nsew"
@@ -26,7 +26,7 @@ class anggotaView(ctk.CTk):
             font=("Arial", 16, "bold")
         ).pack(pady=15)
 
-        # Input Nama Anggota
+        # Input nama anggota
         self.entry_nama = ctk.CTkEntry(
             self.frame_kiri,
             placeholder_text="Masukkan Nama Anggota"
@@ -35,7 +35,7 @@ class anggotaView(ctk.CTk):
             pady=10, padx=15, fill="x"
         )
 
-        # Input Alamat
+        # Input alamat
         self.entry_alamat = ctk.CTkTextbox(
             self.frame_kiri,
             height=90
@@ -44,7 +44,7 @@ class anggotaView(ctk.CTk):
             pady=10, padx=15, fill="x"
         )
 
-        # Tombol Simpan
+        # Tombol simpan
         self.btn_simpan = ctk.CTkButton(
             self.frame_kiri,
             text="Simpan Data",
@@ -55,7 +55,7 @@ class anggotaView(ctk.CTk):
             pady=8, padx=15, fill="x"
         )
 
-        # Tombol Update
+        # Tombol update
         self.btn_update = ctk.CTkButton(
             self.frame_kiri,
             text="Perbarui Data (Update)",
@@ -66,7 +66,7 @@ class anggotaView(ctk.CTk):
             pady=8, padx=15, fill="x"
         )
 
-        # Tombol Delete
+        # Tombol hapus
         self.btn_hapus = ctk.CTkButton(
             self.frame_kiri,
             text="Hapus Data (Delete)",
@@ -77,7 +77,7 @@ class anggotaView(ctk.CTk):
             pady=8, padx=15, fill="x"
         )
 
-        # Tombol Bersihkan Form
+        # Tombol bersihkan form
         self.btn_bersihkan = ctk.CTkButton(
             self.frame_kiri,
             text="Bersihkan Form",
@@ -88,7 +88,7 @@ class anggotaView(ctk.CTk):
             pady=8, padx=15, fill="x"
         )
 
-        # Frame Kanan: Tabel Anggota
+        # Frame kanan: Tabel anggota
         self.frame_kanan = ctk.CTkFrame(self)
         self.frame_kanan.grid(
             row=0, column=1, padx=10, pady=10, sticky="nsew"
@@ -100,7 +100,7 @@ class anggotaView(ctk.CTk):
             font=("Arial", 16, "bold")
         ).pack(pady=15)
 
-        # Tabel Data Anggota
+        # Tabel data anggota
         kolom = ("id", "nama", "alamat")
 
         self.tabel = ttk.Treeview(
@@ -114,15 +114,9 @@ class anggotaView(ctk.CTk):
         self.tabel.heading("nama", text="Nama Anggota")
         self.tabel.heading("alamat", text="Alamat")
 
-        self.tabel.column(
-            "id", width=50, anchor="center"
-        )
-        self.tabel.column(
-            "nama", width=160
-        )
-        self.tabel.column(
-            "alamat", width=250
-        )
+        self.tabel.column("id", width=50, anchor="center")
+        self.tabel.column("nama", width=160)
+        self.tabel.column("alamat", width=250)
 
         self.tabel.pack(
             fill="both", expand=True, padx=15, pady=10
@@ -155,15 +149,13 @@ class anggotaView(ctk.CTk):
         if not pilihan:
             return
 
-        data = self.tabel.item(
-            pilihan[0], "values"
-        )
+        data = self.tabel.item(pilihan[0], "values")
 
         self.bersihkan_form()
         self.entry_nama.insert(0, data[1])
         self.entry_alamat.insert("1.0", data[2])
 
-    # Menyimpan data anggota ke tabel tampilan
+    # Menyimpan data anggota
     def simpan_data(self):
         nama = self.entry_nama.get().strip()
         alamat = self.entry_alamat.get("1.0", "end").strip()
@@ -176,8 +168,10 @@ class anggotaView(ctk.CTk):
             return
 
         id_anggota = max(
-            [int(self.tabel.item(i, "values")[0])
-             for i in self.tabel.get_children()],
+            [
+                int(self.tabel.item(i, "values")[0])
+                for i in self.tabel.get_children()
+            ],
             default=0
         ) + 1
 
@@ -187,8 +181,10 @@ class anggotaView(ctk.CTk):
         )
 
         self.bersihkan_form()
+
         messagebox.showinfo(
-            "Berhasil", "Data anggota berhasil ditambahkan!"
+            "Berhasil",
+            "Data anggota berhasil ditambahkan!"
         )
 
     # Memperbarui data anggota terpilih
@@ -228,8 +224,10 @@ class anggotaView(ctk.CTk):
             )
 
             self.bersihkan_form()
+
             messagebox.showinfo(
-                "Berhasil", "Data anggota berhasil diperbarui!"
+                "Berhasil",
+                "Data anggota berhasil diperbarui!"
             )
 
     # Menghapus data anggota terpilih
@@ -251,8 +249,10 @@ class anggotaView(ctk.CTk):
         if konfirmasi:
             self.tabel.delete(pilihan[0])
             self.bersihkan_form()
+
             messagebox.showinfo(
-                "Berhasil", "Data anggota berhasil dihapus!"
+                "Berhasil",
+                "Data anggota berhasil dihapus!"
             )
 
 
