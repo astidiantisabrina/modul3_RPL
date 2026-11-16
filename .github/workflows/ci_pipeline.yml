@@ -1,15 +1,22 @@
 name: Python CI Pipeline - Sistem Perpustakaan
 
-# Pipeline akan berjalan otomatis saat ada push atau pull request ke branch main
+# Pipeline berjalan otomatis saat ada push atau pull request ke branch main,
+# dan juga bisa dijalankan manual dari tab Actions (workflow_dispatch)
 on:
   push:
     branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
+  workflow_dispatch:
+
+# Hak akses minimum: workflow hanya perlu membaca isi repositori
+permissions:
+  contents: read
 
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     steps:
     - name: 1. Mengambil Kode dari Repositori (Checkout)
@@ -19,6 +26,7 @@ jobs:
       uses: actions/setup-python@v5
       with:
         python-version: "3.11"
+        cache: pip
 
     - name: 3. Menginstal Dependensi Proyek
       run: |
@@ -26,5 +34,10 @@ jobs:
         pip install -r requirements.txt
 
     - name: 4. Menjalankan Automated Unit Testing (Pytest)
+      env:
+        PYTHONPATH: .
+      # Server GitHub tidak punya database MySQL maupun layar, jadi hanya
+      # tes yang memakai mock (tanpa koneksi asli) yang dijalankan di sini.
+      # Untuk menjalankan semua tes: ganti dengan "python -m pytest -v"
       run: |
-        python -m pytest -v
+        python -m pytest test_auth.py -v
