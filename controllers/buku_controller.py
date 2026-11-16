@@ -2,30 +2,33 @@ import tkinter.messagebox as messagebox
 from models.buku_model import BukuModel
 from views.buku_view import BukuView
 
+
 # ASTI DIANTI SABRINA_F52125330104
 class BukuController:
-    def __init__(self):
-        # Inisialisasi Model dan View
+    def __init__(self, user_role="admin"):
         self.model = BukuModel()
         self.view = BukuView()
+        self.user_role = user_role
 
-        # Binding (mengikat) tombol di View dengan fungsi di Controller
-        self.view.btn_simpan.configure(command=self.simpan_data)
-        self.view.btn_update.configure(command=self.update_data)
-        self.view.btn_hapus.configure(command=self.hapus_data)
+        # Hak akses Petugas dan Mahasiswa
+        if self.user_role == "admin":
+            self.view.btn_simpan.configure(command=self.simpan_data)
+            self.view.btn_update.configure(command=self.update_data)
+            self.view.btn_hapus.configure(command=self.hapus_data)
+        else:
+            # Mahasiswa hanya dapat melihat data buku
+            self.view.btn_simpan.configure(state="disabled")
+            self.view.btn_update.configure(state="disabled")
+            self.view.btn_hapus.configure(state="disabled")
 
-        # Memuat data ke tabel saat aplikasi pertama kali dibuka
         self.muat_data_tabel()
 
     def muat_data_tabel(self):
-        # Mengosongkan isi tabel di View terlebih dahulu
         for item in self.view.tabel.get_children():
             self.view.tabel.delete(item)
 
-        # Mengambil data dari Model (database)
         data_buku = self.model.get_all_buku()
 
-        # Memasukkan data baru ke dalam tabel View
         for buku in data_buku:
             self.view.tabel.insert(
                 "",
@@ -39,17 +42,17 @@ class BukuController:
             )
 
     def simpan_data(self):
-        # Mengambil teks dari kotak input di View
         judul = self.view.entry_judul.get()
         penulis = self.view.entry_penulis.get()
         tahun = self.view.entry_tahun.get()
 
-        # Validasi Form Kosong
         if not judul or not penulis or not tahun:
-            messagebox.showwarning("Peringatan", "Semua kolom form harus diisi!")
+            messagebox.showwarning(
+                "Peringatan",
+                "Semua kolom form harus diisi!"
+            )
             return
 
-        # Mengirim data ke Model untuk disimpan
         berhasil = self.model.create_buku(judul, penulis, tahun)
 
         if berhasil:
@@ -57,12 +60,17 @@ class BukuController:
             self.view.kosongkan_form()
             self.muat_data_tabel()
         else:
-            messagebox.showerror("Error", "Terjadi kesalahan saat menyimpan data.")
+            messagebox.showerror("Error", "Gagal menyimpan data buku.")
 
     def update_data(self):
-        # Harus ada baris yang dipilih di tabel
+        if self.user_role != "admin":
+            return
+
         if not self.view.selected_id:
-            messagebox.showwarning("Peringatan", "Pilih dulu data di tabel yang mau diperbarui!")
+            messagebox.showwarning(
+                "Peringatan",
+                "Pilih data yang ingin diperbarui!"
+            )
             return
 
         judul = self.view.entry_judul.get()
@@ -70,26 +78,38 @@ class BukuController:
         tahun = self.view.entry_tahun.get()
 
         if not judul or not penulis or not tahun:
-            messagebox.showwarning("Peringatan", "Semua kolom form harus diisi!")
+            messagebox.showwarning(
+                "Peringatan",
+                "Semua kolom form harus diisi!"
+            )
             return
 
-        berhasil = self.model.update_buku(self.view.selected_id, judul, penulis, tahun)
+        berhasil = self.model.update_buku(
+            self.view.selected_id, judul, penulis, tahun
+        )
 
         if berhasil:
             messagebox.showinfo("Sukses", "Data buku berhasil diperbarui!")
             self.view.kosongkan_form()
             self.muat_data_tabel()
         else:
-            messagebox.showerror("Error", "Terjadi kesalahan saat memperbarui data.")
+            messagebox.showerror("Error", "Gagal memperbarui data.")
 
     def hapus_data(self):
-        # Harus ada baris yang dipilih di tabel
-        if not self.view.selected_id:
-            messagebox.showwarning("Peringatan", "Pilih dulu data di tabel yang mau dihapus!")
+        if self.user_role != "admin":
             return
 
-        # Konfirmasi sebelum menghapus
-        if not messagebox.askyesno("Konfirmasi", "Yakin ingin menghapus data ini?"):
+        if not self.view.selected_id:
+            messagebox.showwarning(
+                "Peringatan",
+                "Pilih data yang ingin dihapus!"
+            )
+            return
+
+        if not messagebox.askyesno(
+            "Konfirmasi",
+            "Yakin ingin menghapus data ini?"
+        ):
             return
 
         berhasil = self.model.delete_buku(self.view.selected_id)
@@ -99,8 +119,7 @@ class BukuController:
             self.view.kosongkan_form()
             self.muat_data_tabel()
         else:
-            messagebox.showerror("Error", "Terjadi kesalahan saat menghapus data.")
+            messagebox.showerror("Error", "Gagal menghapus data.")
 
-    # Fungsi untuk menyalakan aplikasi
     def run(self):
         self.view.mainloop()
