@@ -67,3 +67,27 @@ class BukuModel:
             return True
 
         return False
+
+# TEMPEL method ini ke dalam class BukuModel di models/buku_model.py
+# (di dalam class, sejajar dengan method delete_buku, termasuk indentasinya)
+
+    def reset_id_jika_kosong(self):
+        """Jika tabel buku sudah kosong, ID berikutnya mulai lagi dari 1."""
+        if not self.conn:
+            return False
+
+        cursor = self.conn.cursor()   # cursor biasa (bukan dictionary)
+        try:
+            cursor.execute(f"SELECT COUNT(*) FROM {self.table_name}")
+            jumlah = cursor.fetchone()[0]
+
+            if jumlah == 0:
+                cursor.execute(f"ALTER TABLE {self.table_name} AUTO_INCREMENT = 1")
+                self.conn.commit()
+                return True
+            return False
+        except Exception as e:
+            print(f"Gagal mereset ID: {e}")
+            return False
+        finally:
+            cursor.close()
