@@ -6,187 +6,264 @@ from views.buku_view import BukuView
 
 # ASTI DIANTI SABRINA_F5212530104
 
+
 class BukuController:
 
-    def __init__(self, user_role="admin", on_logout=None):
+    def __init__(self, master, user_role="admin", on_logout=None):
 
-        # Inisialisasi Model dan View
         self.model = BukuModel()
-        self.user_role = user_role
+        self.user_role = str(user_role).strip().lower()
+        self.on_logout = on_logout
 
-        # on_logout diteruskan ke View agar tombol Logout bisa
-        # mengembalikan pengguna ke jendela Login
+        # Role petugas dan admin memiliki hak mengelola buku
+        self.is_admin = self.user_role in ("admin", "petugas")
+
+        # Membuat halaman buku sebagai jendela turunan
         self.view = BukuView(
+            master=master,
             user_role=self.user_role,
-            on_logout=on_logout
+            on_logout=self.logout
         )
 
-        # Menghubungkan tombol. Tombol Simpan, Update, dan Delete sudah
-        # dikunci (state="disabled") oleh View untuk role selain admin,
-        # dan method-nya juga tetap memeriksa role sebagai lapisan kedua.
-        self.view.btn_simpan.configure(command=self.simpan_data)
-        self.view.btn_update.configure(command=self.update_data)
-        self.view.btn_hapus.configure(command=self.hapus_data)
+        # Hubungkan tombol CRUD dengan fungsi controller
+        self.view.btn_simpan.configure(
+            command=self.simpan_data
+        )
 
-        # Memuat data buku
+        self.view.btn_update.configure(
+            command=self.update_data
+        )
+
+        self.view.btn_hapus.configure(
+            command=self.hapus_data
+        )
+
+        # Muat data buku dari database
         self.muat_data_tabel()
+
+    # =================================
+    # MENAMPILKAN PESAN
+    # =================================
+
+    def _pesan(self, jenis, judul, isi):
+        fungsi = getattr(messagebox, jenis)
+
+        fungsi(
+            judul,
+            isi,
+            parent=self.view
+        )
+
+    # =================================
+    # VALIDASI HAK AKSES
+    # =================================
+
+    def _cek_admin(self):
+
+        if not self.is_admin:
+            self._pesan(
+                "showerror",
+                "Akses Ditolak",
+                "Hanya Petugas yang dapat mengelola data buku!"
+            )
+            return False
+
+        return True
 
     # =================================
     # VALIDASI INPUT FORM
     # =================================
+
     def _ambil_input_form(self):
-        """Mengambil dan memvalidasi isi form.
-        Mengembalikan (judul, penulis, tahun) atau None jika tidak valid."""
+
         judul = self.view.entry_judul.get().strip()
         penulis = self.view.entry_penulis.get().strip()
         tahun = self.view.entry_tahun.get().strip()
 
         if not judul or not penulis or not tahun:
-            messagebox.showwarning(
+            self._pesan(
+                "showwarning",
                 "Peringatan",
                 "Semua kolom harus diisi!"
             )
             return None
 
         if not tahun.isdigit() or len(tahun) != 4:
-            messagebox.showwarning(
+            self._pesan(
+                "showwarning",
                 "Peringatan",
-                "Tahun terbit harus berupa 4 digit angka (misal: 2024)!"
+                "Tahun terbit harus berupa 4 digit angka!"
             )
             return None
 
-        return judul, penulis, tahun
+        return judul, penulis, int(tahun)
 
     # =================================
-    # MENAMPILKAN DATA BUKU
+    # MEMUAT DATA BUKU
     # =================================
+
     def muat_data_tabel(self):
 
-        for item in self.view.tabel.get_children():
-            self.view.tabel.delete(item)
+        try:
+            # Bersihkan tabel terlebih dahulu
+            for item in self.view.tabel.get_children():
+                self.view.tabel.delete(item)
 
-        data_buku = self.model.get_all_buku()
+            # Ambil data dari database
+            data_buku = self.model.get_all_buku()
 
-        for buku in data_buku:
+            if not data_buku:
+                return
 
-            self.view.tabel.insert(
-                "",
-                "end",
-                values=(
-                    buku["id_buku"],
-                    buku["judul"],
-                    buku["penulis"],
-                    buku["tahun_terbit"]
+            # Masukkan data ke tabel
+            for buku in data_buku:
+
+                self.view.tabel.insert(
+                    "",
+                    "end",
+                    values=(
+                        buku["id_buku"],
+                        buku["judul"],
+                        buku["penulis"],
+                        buku["tahun_terbit"]
+                    )
                 )
+
+        except Exception as error:
+
+            print("Kesalahan memuat data buku:", error)
+
+            self._pesan(
+                "showerror",
+                "Gagal Memuat Data",
+                f"Data buku tidak dapat ditampilkan:\n{error}"
             )
 
     # =================================
     # MENYIMPAN DATA BUKU
-    # (khusus admin)
     # =================================
+
     def simpan_data(self):
 
-        if self.user_role != "admin":
-            messagebox.showerror(
-                "Akses Ditolak",
-                "Hanya Petugas yang dapat menambah buku!"
-            )
+        if not self._cek_admin():
             return
 
         data = self._ambil_input_form()
+
         if data is None:
             return
 
-        judul, penulis, tahun = data
+        try:
+            judul, penulis, tahun = data
 
-        berhasil = self.model.create_buku(
-            judul,
-            penulis,
-            tahun
-        )
-
-        if berhasil:
-
-            messagebox.showinfo(
-                "Sukses",
-                "Data buku berhasil disimpan!"
+            berhasil = self.model.create_buku(
+                judul,
+                penulis,
+                tahun
             )
 
-            self.view.kosongkan_form()
-            self.muat_data_tabel()
+            if berhasil:
 
-        else:
+                self._pesan(
+                    "showinfo",
+                    "Sukses",
+                    "Data buku berhasil disimpan!"
+                )
 
-            messagebox.showerror(
-                "Error",
-                "Gagal menyimpan data buku!"
+                self.view.kosongkan_form()
+                self.muat_data_tabel()
+
+            else:
+
+                self._pesan(
+                    "showerror",
+                    "Gagal",
+                    "Gagal menyimpan data buku!"
+                )
+
+        except Exception as error:
+
+            print("Kesalahan simpan buku:", error)
+
+            self._pesan(
+                "showerror",
+                "Kesalahan",
+                str(error)
             )
 
     # =================================
     # MEMPERBARUI DATA BUKU
-    # (khusus admin)
     # =================================
+
     def update_data(self):
 
-        if self.user_role != "admin":
-            messagebox.showerror(
-                "Akses Ditolak",
-                "Hanya Petugas yang dapat memperbarui buku!"
-            )
+        if not self._cek_admin():
             return
 
         if not self.view.selected_id:
-            messagebox.showwarning(
+            self._pesan(
+                "showwarning",
                 "Peringatan",
                 "Pilih data buku terlebih dahulu!"
             )
             return
 
         data = self._ambil_input_form()
+
         if data is None:
             return
 
-        judul, penulis, tahun = data
+        try:
+            judul, penulis, tahun = data
 
-        berhasil = self.model.update_buku(
-            self.view.selected_id,
-            judul,
-            penulis,
-            tahun
-        )
-
-        if berhasil:
-
-            messagebox.showinfo(
-                "Sukses",
-                "Data buku berhasil diperbarui!"
+            berhasil = self.model.update_buku(
+                self.view.selected_id,
+                judul,
+                penulis,
+                tahun
             )
 
-            self.view.kosongkan_form()
-            self.muat_data_tabel()
+            if berhasil:
 
-        else:
+                self._pesan(
+                    "showinfo",
+                    "Sukses",
+                    "Data buku berhasil diperbarui!"
+                )
 
-            messagebox.showerror(
-                "Error",
-                "Gagal memperbarui data buku!"
+                self.view.kosongkan_form()
+                self.muat_data_tabel()
+
+            else:
+
+                self._pesan(
+                    "showerror",
+                    "Gagal",
+                    "Gagal memperbarui data buku!"
+                )
+
+        except Exception as error:
+
+            print("Kesalahan update buku:", error)
+
+            self._pesan(
+                "showerror",
+                "Kesalahan",
+                str(error)
             )
 
     # =================================
     # MENGHAPUS DATA BUKU
-    # (khusus admin)
     # =================================
+
     def hapus_data(self):
 
-        if self.user_role != "admin":
-            messagebox.showerror(
-                "Akses Ditolak",
-                "Hanya Petugas yang dapat menghapus buku!"
-            )
+        if not self._cek_admin():
             return
 
         if not self.view.selected_id:
-            messagebox.showwarning(
+            self._pesan(
+                "showwarning",
                 "Peringatan",
                 "Pilih data buku terlebih dahulu!"
             )
@@ -194,41 +271,88 @@ class BukuController:
 
         konfirmasi = messagebox.askyesno(
             "Konfirmasi",
-            "Apakah kamu yakin ingin menghapus buku ini?"
+            "Apakah Anda yakin ingin menghapus buku ini?",
+            parent=self.view
         )
 
         if not konfirmasi:
             return
 
-        berhasil = self.model.delete_buku(
-            self.view.selected_id
-        )
+        try:
+            berhasil = self.model.delete_buku(
+                self.view.selected_id
+            )
 
-        if berhasil:
+            if berhasil:
 
-            # Jika semua buku sudah terhapus, ID berikutnya mulai dari 1 lagi
+                # Segarkan tampilan lebih dulu agar langsung terlihat
+                self.view.kosongkan_form()
+                self.muat_data_tabel()
+
+                self._pesan(
+                    "showinfo",
+                    "Sukses",
+                    "Data buku berhasil dihapus!"
+                )
+
+                # Reset ID dijalankan terpisah setelah tampilan diperbarui,
+                # sehingga kegagalannya tidak membatalkan proses hapus
+                self.view.after(100, self._reset_id_aman)
+
+            else:
+
+                self._pesan(
+                    "showerror",
+                    "Gagal",
+                    "Gagal menghapus data buku!"
+                )
+
+        except Exception as error:
+
+            print("Kesalahan hapus buku:", error)
+
+            self._pesan(
+                "showerror",
+                "Kesalahan",
+                str(error)
+            )
+
+    # =================================
+    # RESET ID JIKA TABEL KOSONG
+    # =================================
+
+    def _reset_id_aman(self):
+
+        try:
             self.model.reset_id_jika_kosong()
 
-            messagebox.showinfo(
-                "Sukses",
-                "Data buku berhasil dihapus!"
-            )
+        except Exception as error:
 
-            self.view.kosongkan_form()
-            self.muat_data_tabel()
-
-        else:
-
-            messagebox.showerror(
-                "Error",
-                "Gagal menghapus data buku!"
-            )
+            # Gagal reset ID tidak boleh menghentikan aplikasi
+            print("Kesalahan reset ID buku:", error)
 
     # =================================
-    # MENJALANKAN APLIKASI
+    # LOGOUT
     # =================================
+
+    def logout(self):
+
+        callback = self.on_logout
+
+        self.view.destroy()
+
+        if callback:
+            callback()
+
+    # =================================
+    # MENJALANKAN HALAMAN BUKU
+    # =================================
+
     def run(self):
-        # Pastikan jendela tampil di depan (tidak tertutup jendela VS Code)
+
+        self.view.deiconify()
         self.view.lift()
         self.view.focus_force()
-        self.view.mainloop()
+
+        # Tidak memanggil mainloop() lagi.
+        # Mainloop utama tetap dijalankan oleh LoginView.
